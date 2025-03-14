@@ -14,29 +14,27 @@ var chatService = new AzureOpenAIChatCompletionService(deploymentName, endpoint!
 
 var kernelBuilder = Kernel.CreateBuilder();
 
-kernelBuilder.Plugins.AddFromType<PizzaMenuPlugin>();
 kernelBuilder.Plugins.AddFromType<ShoppingCartPlugin>();
 kernelBuilder.Plugins.AddFromType<PaymentPlugin>();
-
-var promptSettings = new AzureOpenAIPromptExecutionSettings()
-{
-    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
-};
+kernelBuilder.Plugins.AddFromType<PizzaMenuPlugin>();
 
 var kernel = kernelBuilder.Build();
 
-var systemMessage = "You are a member of pizza shop called PizzerIA, people are going to come to you asking for information, orders and pay. You must only answer about this and don't answer about any other topics.";
-var history = new ChatHistory(systemMessage);
+var promptSettings = new AzureOpenAIPromptExecutionSettings()
+{
+    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+};
+
+var systemMessage = "You are a member of a pizza shop called PizzerIA, people are going to come to you asking for information about pizzas, orders and pay. You must only answer about this and do not answer about any other topic!";
+var chatHistory = new ChatHistory(systemMessage);
 
 while (true)
 {
     Console.Write("Q: ");
-    var question = Console.ReadLine();
+    var prompt = Console.ReadLine();
+    chatHistory.AddUserMessage(prompt!);
 
-    history.AddUserMessage(question!);
-
-    var answer = await chatService.GetChatMessageContentAsync(history, promptSettings, kernel);
-
+    var answer = await chatService.GetChatMessageContentAsync(chatHistory, promptSettings, kernel);
     Console.WriteLine($"A: {answer.ToString()}");
 }
 
@@ -142,3 +140,5 @@ public class CartService
     public static void RemoveItem(string item) => CartItems.Remove(item);
     public static void ClearCart() => CartItems.Clear();
 }
+
+
