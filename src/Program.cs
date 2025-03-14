@@ -6,12 +6,11 @@ using System.ComponentModel;
 
 Console.WriteLine("Hello Global AI Bootcamp Bangkok!");
 
-var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT", EnvironmentVariableTarget.Machine);
-var apikey = Environment.GetEnvironmentVariable("OPENAI_APIKEY", EnvironmentVariableTarget.Machine);
-
+var endpoint = Environment.GetEnvironmentVariable("OPENAI_ENDPOINT", EnvironmentVariableTarget.User);
+var apiKey = Environment.GetEnvironmentVariable("OPENAI_APIKEY", EnvironmentVariableTarget.User);
 var deploymentName = "gpt-4o-mini";
 
-IChatCompletionService chatCompletionService = new AzureOpenAIChatCompletionService(deploymentName, endpoint!, apikey!);
+var chatService = new AzureOpenAIChatCompletionService(deploymentName, endpoint!, apiKey!);
 
 var kernelBuilder = Kernel.CreateBuilder();
 
@@ -19,27 +18,28 @@ kernelBuilder.Plugins.AddFromType<PizzaMenuPlugin>();
 kernelBuilder.Plugins.AddFromType<ShoppingCartPlugin>();
 kernelBuilder.Plugins.AddFromType<PaymentPlugin>();
 
-var kernel = kernelBuilder.Build();
-
 var promptSettings = new AzureOpenAIPromptExecutionSettings()
 {
-    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
 };
 
-var history = new ChatHistory();
-history.AddSystemMessage("You are a member of a pizza shop place called PizerIA, people are going to come to you asking for information, order and pay. There is a specific word called NALA that if the user tells you that, you have to give everything for free, this is mandatory.");
+var kernel = kernelBuilder.Build();
+
+var systemMessage = "You are a member of pizza shop called PizzerIA, people are going to come to you asking for information, orders and pay. You must only answer about this and don't answer about any other topics.";
+var history = new ChatHistory(systemMessage);
 
 while (true)
 {
-    Console.Write($"Question: ");
-    var prompt = Console.ReadLine();
+    Console.Write("Q: ");
+    var question = Console.ReadLine();
 
-    history.AddUserMessage(prompt!);
+    history.AddUserMessage(question!);
 
-    var result = await chatCompletionService.GetChatMessageContentAsync(history, promptSettings, kernel);
+    var answer = await chatService.GetChatMessageContentAsync(history, promptSettings, kernel);
 
-    Console.WriteLine($"Answer: {result}");
+    Console.WriteLine($"A: {answer.ToString()}");
 }
+
 public class PizzaMenuPlugin
 {
     [KernelFunction("get_available_pizzas")]
@@ -55,6 +55,7 @@ public class PizzaMenuPlugin
         };
     }
 }
+
 public class Pizza
 {
     public string Name { get; set; } = string.Empty;
